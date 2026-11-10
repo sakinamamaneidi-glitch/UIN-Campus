@@ -1,29 +1,20 @@
+#include "statistiques.hpp"
+
 #include <algorithm>
-#include <array>
-#include <cmath>
-#include <cstddef>
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <stdexcept>
 #include <string>
+#include <vector>
 
 constexpr int NOTE_MIN = 0;
 constexpr int NOTE_MAX = 20;
-constexpr int NB_MENTIONS = 5;
 constexpr int MAX_ETUDIANTS = 200;
-
-enum class Mention {
-    Ajourné,
-    Passable,
-    AssezBien,
-    Bien,
-    TresBien
-};
 
 double lireNote(const std::string& message) {
     while (true) {
         std::cout << message;
+
         std::string saisie;
         std::cin >> saisie;
 
@@ -37,31 +28,11 @@ double lireNote(const std::string& message) {
                 note >= NOTE_MIN && note <= NOTE_MAX) {
                 return note;
             }
-        } catch (const std::exception&) {
-            // Saisie invalide.
+        } catch (...) {
         }
 
         std::cout << "Erreur : entrez une note entre 0 et 20.\n";
     }
-}
-
-Mention mentionPour(double note) {
-    if (note < 10) return Mention::Ajourné;
-    if (note < 12) return Mention::Passable;
-    if (note < 14) return Mention::AssezBien;
-    if (note < 16) return Mention::Bien;
-    return Mention::TresBien;
-}
-
-std::string libelle(Mention mention) {
-    switch (mention) {
-        case Mention::Ajourné: return "Ajourne";
-        case Mention::Passable: return "Passable";
-        case Mention::AssezBien: return "Assez bien";
-        case Mention::Bien: return "Bien";
-        case Mention::TresBien: return "Tres bien";
-    }
-    return "Inconnu";
 }
 
 int main() {
@@ -86,70 +57,46 @@ int main() {
             std::numeric_limits<std::streamsize>::max(), '\n');
     }
 
-    std::array<double, MAX_ETUDIANTS> notes{};
-    std::array<int, NB_MENTIONS> effectifs{};
-
-    double somme{};
-    double minimum = NOTE_MAX;
-    double maximum = NOTE_MIN;
+    std::vector<double> notes;
 
     for (int i = 0; i < nombreEtudiants; ++i) {
-        notes[static_cast<std::size_t>(i)] =
+        notes.push_back(
             lireNote("Note de l'etudiant " +
-                     std::to_string(i + 1) + " : ");
-
-        double note = notes[static_cast<std::size_t>(i)];
-
-        somme += note;
-        minimum = std::min(minimum, note);
-        maximum = std::max(maximum, note);
-
-        Mention mention = mentionPour(note);
-        ++effectifs[static_cast<std::size_t>(mention)];
+                     std::to_string(i + 1) + " : ")
+        );
     }
 
-    double moyenne =
-        somme / static_cast<double>(nombreEtudiants);
-
-    double sommeCarres{};
-
-    for (int i = 0; i < nombreEtudiants; ++i) {
-        double difference =
-            notes[static_cast<std::size_t>(i)] - moyenne;
-        sommeCarres += difference * difference;
-    }
-
-    double ecartType = std::sqrt(
-        sommeCarres / static_cast<double>(nombreEtudiants));
-
-    int admis = nombreEtudiants - effectifs[0];
+    const Statistiques resultat = calculerStatistiques(notes);
 
     std::cout << "\n===== RESULTATS =====\n";
     std::cout << "UE : " << ue << '\n';
     std::cout << std::fixed << std::setprecision(2);
 
-    std::cout << "Minimum : " << minimum << '\n';
-    std::cout << "Maximum : " << maximum << '\n';
-    std::cout << "Moyenne : " << moyenne << '\n';
-    std::cout << "Ecart-type : " << ecartType << '\n';
+    std::cout << "Minimum : " << resultat.minimum << '\n';
+    std::cout << "Maximum : " << resultat.maximum << '\n';
+    std::cout << "Moyenne : " << resultat.moyenne << '\n';
+    std::cout << "Ecart-type : " << resultat.ecartType << '\n';
 
-    std::cout << "Admis : " << admis << " / "
+    std::cout << "Admis : " << resultat.admis << " / "
               << nombreEtudiants << '\n';
 
     std::cout << "Pourcentage admis : "
-              << 100.0 * admis / nombreEtudiants << "%\n";
+              << 100.0 * resultat.admis / nombreEtudiants
+              << "%\n";
 
     std::cout << "\n===== HISTOGRAMME =====\n";
 
-    for (std::size_t i = 0; i < effectifs.size(); ++i) {
+    for (std::size_t i = 0; i < resultat.effectifs.size(); ++i) {
         Mention mention = static_cast<Mention>(i);
 
         std::cout << std::left << std::setw(12)
                   << libelle(mention) << " : "
                   << std::string(
-                         static_cast<std::size_t>(effectifs[i]), '*')
-                  << " (" << effectifs[i] << ")\n";
+                         static_cast<std::size_t>(
+                             resultat.effectifs[i]), '*')
+                  << " (" << resultat.effectifs[i] << ")\n";
     }
 
     return 0;
 }
+    
